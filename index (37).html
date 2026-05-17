@@ -1,0 +1,1797 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Meal Planner" />
+  <title>🍽️ Family Meal Planner</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #F0F2F5; font-family: 'Nunito', sans-serif; }
+    #root { max-width: 480px; margin: 0 auto; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect, useCallback } = React;
+
+    // ── localStorage-based storage (works on GitHub Pages) ──
+    window.storage = {
+      get: async (key) => {
+        try {
+          const val = localStorage.getItem('meal_' + key);
+          return val ? { key, value: val } : null;
+        } catch { return null; }
+      },
+      set: async (key, value) => {
+        try {
+          localStorage.setItem('meal_' + key, value);
+          return { key, value };
+        } catch { return null; }
+      },
+      delete: async (key) => {
+        try {
+          localStorage.removeItem('meal_' + key);
+          return { key, deleted: true };
+        } catch { return null; }
+      },
+    };
+
+
+// ─── INITIAL DATA ─────────────────────────────────────────────────────────────
+
+const INIT_REGULAR_BREAKFASTS = [
+  { id: "rb1",  name: "Pulda",                  recipe: "", link: "" },
+  { id: "rb2",  name: "Appam",                  recipe: "", link: "" },
+  { id: "rb3",  name: "Uttapam",                recipe: "", link: "" },
+  { id: "rb4",  name: "Seviyan Upma",           recipe: "", link: "" },
+  { id: "rb5",  name: "Upma",                   recipe: "", link: "" },
+  { id: "rb6",  name: "Poha",                   recipe: "", link: "" },
+  { id: "rb7",  name: "Vaghani",                recipe: "", link: "" },
+  { id: "rb8",  name: "Handvo",                 recipe: "", link: "" },
+  { id: "rb9",  name: "Rawa Dosa",              recipe: "", link: "" },
+  { id: "rb10", name: "Rawa Oats Chilla",       recipe: "", link: "" },
+  { id: "rb11", name: "Bread Tomato Mix",       recipe: "", link: "" },
+  { id: "rb12", name: "Khakra Chamka Hua",      recipe: "", link: "" },
+  { id: "rb13", name: "Methi Thepla",           recipe: "", link: "" },
+  { id: "rb14", name: "Dudhi Thepla",           recipe: "", link: "" },
+  { id: "rb15", name: "Dudhi Gatta",            recipe: "", link: "" },
+  { id: "rb16", name: "Dalia Upma",             recipe: "", link: "" },
+  { id: "rb17", name: "Moong Khakhara & Vaghani", recipe: "", link: "" },
+  { id: "rb18", name: "Rawa Dhokla",            recipe: "", link: "" },
+  { id: "rb19", name: "Sabudana Khichdi",       recipe: "", link: "" },
+  { id: "rb20", name: "5 Types of Sandwiches",  recipe: "", link: "" },
+  { id: "rb21", name: "Khasta Samosa",          recipe: "", link: "https://youtube.com/shorts/XZp0nhtbXBw" },
+  { id: "rb22", name: "Masala Upma",            recipe: "", link: "" },
+  { id: "rb23", name: "Set Dosa",               recipe: "", link: "" },
+  { id: "rb24", name: "Mendu Vada",             recipe: "", link: "" },
+  { id: "rb25", name: "Tomato Upma",            recipe: "", link: "https://www.instagram.com/reel/DMPGzlIvfgv/" },
+  { id: "rb26", name: "Veg Roll",               recipe: "", link: "https://www.instagram.com/reel/DLop8b_vVsG/" },
+  { id: "rb27", name: "Besan Rawa Chilla",      recipe: "", link: "https://www.instagram.com/reel/DLXAaB9h4RY/" },
+];
+
+const INIT_GUEST_BREAKFASTS = [
+  { id: "gb1",  name: "Doodhi Gatta",           recipe: "", link: "" },
+  { id: "gb2",  name: "Khasta Kachori",         recipe: "", link: "" },
+  { id: "gb3",  name: "White Dhokla",           recipe: "", link: "" },
+  { id: "gb4",  name: "Toast Sandwich",         recipe: "", link: "" },
+  { id: "gb5",  name: "Appam",                  recipe: "", link: "" },
+  { id: "gb6",  name: "Uttapam",                recipe: "", link: "" },
+  { id: "gb7",  name: "Moong Daal Steamed Dhokla", recipe: "", link: "" },
+  { id: "gb8",  name: "Hajia",                  recipe: "", link: "" },
+  { id: "gb9",  name: "Vaghani",                recipe: "", link: "" },
+  { id: "gb10", name: "Kheer",                  recipe: "", link: "" },
+  { id: "gb11", name: "Methi Thepla",           recipe: "", link: "" },
+  { id: "gb12", name: "Khichdi Roti",           recipe: "", link: "" },
+  { id: "gb13", name: "Rice Ghee",              recipe: "", link: "" },
+  { id: "gb14", name: "Corn Ghee",              recipe: "", link: "" },
+  { id: "gb15", name: "Fruit Salad",            recipe: "", link: "" },
+  { id: "gb16", name: "Anjeer Doodh",           recipe: "", link: "" },
+  { id: "gb17", name: "Patra",                  recipe: "", link: "" },
+  { id: "gb18", name: "Khandvi",                recipe: "", link: "" },
+];
+
+const INIT_DAALS = [
+  { id: "dl1", name: "Gili Daal", recipe: "", link: "" },
+  { id: "dl2", name: "Black Daal", recipe: "", link: "" },
+  { id: "dl3", name: "Daal Tadka", recipe: "", link: "" },
+  { id: "dl4", name: "Palak Daal", recipe: "", link: "" },
+  { id: "dl5", name: "Chamki Daal", recipe: "", link: "" },
+  { id: "dl6", name: "Tuvar Daal", recipe: "", link: "" },
+  { id: "dl7", name: "Daal Methi", recipe: "", link: "" },
+  { id: "dl8", name: "Gujarati Daal", recipe: "", link: "" },
+  { id: "dl9", name: "Chana Dudhi", recipe: "", link: "" },
+  { id: "dl10", name: "Rajma", recipe: "", link: "" },
+  { id: "dl11", name: "Chole", recipe: "", link: "" },
+  { id: "dl12", name: "Kadhi", recipe: "", link: "" },
+];
+
+const INIT_SABJIS = [
+  // Marwari
+  { id: "sm1", name: "Kubtiya", category: "Marwari", recipe: "", link: "" },
+  { id: "sm2", name: "Rambda", category: "Marwari", recipe: "", link: "" },
+  { id: "sm3", name: "Hara Chana", category: "Marwari", recipe: "", link: "" },
+  { id: "sm4", name: "Kadhi", category: "Marwari", recipe: "", link: "" },
+  { id: "sm5", name: "Gatte ki Sabji", category: "Marwari", recipe: "", link: "" },
+  { id: "sm6", name: "Papad Methi", category: "Marwari", recipe: "", link: "" },
+  { id: "sm7", name: "Vadi", category: "Marwari", recipe: "", link: "" },
+  { id: "sm8", name: "Hiravadi", category: "Marwari", recipe: "", link: "" },
+  { id: "sm9", name: "Pora", category: "Marwari", recipe: "", link: "" },
+  // Punjabi
+  { id: "sp1", name: "Mixed Veg Punjabi Style", category: "Punjabi", recipe: "", link: "" },
+  { id: "sp2", name: "Matar Paneer", category: "Punjabi", recipe: "", link: "" },
+  { id: "sp3", name: "Matar ki Sabji", category: "Punjabi", recipe: "", link: "" },
+  { id: "sp4", name: "Veg Jalfrazi", category: "Punjabi", recipe: "", link: "" },
+  { id: "sp5", name: "Dudhi Kofta ki Sabji", category: "Punjabi", recipe: "", link: "" },
+  // Green
+  { id: "sg1", name: "Patta Gobi", category: "Green", recipe: "", link: "" },
+  { id: "sg2", name: "Patta Gobi Matar", category: "Green", recipe: "", link: "" },
+  { id: "sg3", name: "Matar Tomato", category: "Green", recipe: "", link: "" },
+  { id: "sg4", name: "Phool Gobi Matar Aloo", category: "Green", recipe: "", link: "" },
+  { id: "sg5", name: "Gajar Matar Aloo with Tomatoes", category: "Green", recipe: "", link: "" },
+  { id: "sg6", name: "Sing", category: "Green", recipe: "", link: "" },
+  { id: "sg7", name: "Turya", category: "Green", recipe: "", link: "" },
+  { id: "sg8", name: "Dudhi", category: "Green", recipe: "", link: "" },
+  { id: "sg9", name: "Bhindi", category: "Green", recipe: "", link: "" },
+  { id: "sg10", name: "Gawar", category: "Green", recipe: "", link: "" },
+  { id: "sg11", name: "Aloo Parwar", category: "Green", recipe: "", link: "" },
+  { id: "sg12", name: "Tinda", category: "Green", recipe: "", link: "" },
+  { id: "sg13", name: "Karela", category: "Green", recipe: "", link: "" },
+  { id: "sg14", name: "Sanlewa ki Sabji", category: "Green", recipe: "", link: "" },
+  { id: "sg15", name: "Bharwa Tinda", category: "Green", recipe: "", link: "" },
+  { id: "sg16", name: "Tindli", category: "Green", recipe: "", link: "" },
+  { id: "sg17", name: "Aloo ki Sabji Jhol Wali", category: "Green", recipe: "", link: "" },
+  { id: "sg18", name: "Aloo Matar", category: "Green", recipe: "", link: "" },
+  { id: "sg19", name: "Palak with Tomatoes", category: "Green", recipe: "", link: "" },
+  { id: "sg20", name: "Palak Paneer", category: "Green", recipe: "", link: "" },
+  { id: "sg21", name: "Chawla Fali", category: "Green", recipe: "", link: "" },
+];
+
+const INIT_DINNER_COMBOS = [
+  { id: "dc1", name: "Set Dosa", components: ["Set Dosa", "Chutney", "Sambhar"], recipe: "", link: "", category: "South Indian" },
+  { id: "dc2", name: "Rawa Dosa", components: ["Rawa Dosa", "Sambhar", "Chutney"], recipe: "", link: "", category: "South Indian" },
+  { id: "dc3", name: "Dosa", components: ["Dosa", "Aloo Masala", "Chutney", "Sambhar"], recipe: "", link: "", category: "South Indian" },
+  { id: "dc4", name: "Rawa Idli", components: ["Rawa Idli", "Sambhar", "Chutney"], recipe: "", link: "", category: "South Indian" },
+  { id: "dc5", name: "Idli", components: ["Idli", "Sambhar", "Chutney"], recipe: "", link: "", category: "South Indian" },
+  { id: "dc6", name: "Pau Bhaji", components: ["Pau Bhaji", "Daal Chawal"], recipe: "", link: "", category: "Street Food" },
+  { id: "dc7", name: "Pani Puri", components: ["Pani Puri", "Daal Chawal"], recipe: "", link: "", category: "Street Food" },
+  { id: "dc8", name: "Noodles", components: ["Noodles", "Daal Chawal"], recipe: "", link: "", category: "International" },
+  { id: "dc9", name: "Ragda Pattice", components: ["Ragda Pattice", "Daal Khichdi"], recipe: "", link: "", category: "Street Food" },
+  { id: "dc10", name: "Pizza", components: ["Pizza", "Soup", "Daal Chawal"], recipe: "", link: "", category: "International" },
+  { id: "dc11", name: "Biryani", components: ["Biryani", "Raita"], recipe: "", link: "", category: "Festive" },
+  { id: "dc12", name: "Bruschetta", components: ["Bruschetta", "Corn Herbed Rice"], recipe: "", link: "", category: "International" },
+  { id: "dc13", name: "Corn Herbed Rice", components: ["Corn Herbed Rice", "Pesto Sauce"], recipe: "", link: "https://www.instagram.com/reel/DOQLRaKkyCL/", category: "International" },
+  { id: "dc14", name: "Thai Curry", components: ["Thai Curry", "Rice"], recipe: "", link: "https://youtu.be/xieenWcXdpg", category: "International" },
+  { id: "dc15", name: "Burrito Bowl", components: ["Burrito Bowl"], recipe: "", link: "https://youtu.be/ESJnmZJa9T8", category: "International" },
+  { id: "dc16", name: "Daal Dhokli", components: ["Daal Dhokli", "Rotla", "Aloo ki Sabji"], recipe: "", link: "", category: "Gujarati" },
+  { id: "dc17", name: "Kadhi Khichdi", components: ["Kadhi", "Khichdi", "Moong", "Doodhi", "Roti", "Soup"], recipe: "", link: "", category: "Gujarati" },
+  { id: "dc18", name: "Daal Chawal Rotla Goli", components: ["Daal Chawal", "Goli", "Bhakri"], recipe: "", link: "", category: "Gujarati" },
+  { id: "dc19", name: "Suti Khichdi", components: ["Suti Khichdi", "Meethi Kadi", "Moong", "Roti"], recipe: "", link: "", category: "Gujarati" },
+  { id: "dc20", name: "Gujarati Daal Thali", components: ["Gujarati Daal", "Rice", "Roti", "Aloo ki Sabji Rajji Style"], recipe: "", link: "", category: "Gujarati" },
+  { id: "dc21", name: "Daal Chawal Rotla Sing", components: ["Daal Chawal", "Rotla", "Sing"], recipe: "", link: "", category: "Gujarati" },
+  { id: "dc22", name: "Matar Pulao", components: ["Matar Pulao", "Kadhi", "Moong", "Roti"], recipe: "", link: "", category: "Gujarati" },
+  { id: "dc23", name: "Aloo Capsicum", components: ["Aloo Capsicum", "Daal Chawal", "Roti"], recipe: "", link: "https://youtube.com/shorts/3xx37k4TNbc", category: "Gujarati" },
+  { id: "dc24", name: "Chamki Daal", components: ["Chamki Daal", "Bhindi", "Kheer"], recipe: "", link: "", category: "Gujarati" },
+  { id: "dc25", name: "Mixed Veg Paratha", components: ["Mixed Veg Paratha", "Daal Chawal"], recipe: "", link: "", category: "Gujarati" },
+];
+
+const INIT_DINNER_MAINS = [
+  { id: "dm1", name: "Set Dosa", recipe: "", link: "" },
+  { id: "dm2", name: "Rawa Dosa", recipe: "", link: "" },
+  { id: "dm3", name: "Dosa", recipe: "", link: "" },
+  { id: "dm4", name: "Rawa Idli", recipe: "", link: "" },
+  { id: "dm5", name: "Idli", recipe: "", link: "" },
+  { id: "dm6", name: "Pau Bhaji", recipe: "", link: "" },
+  { id: "dm7", name: "Pani Puri", recipe: "", link: "" },
+  { id: "dm8", name: "Noodles", recipe: "", link: "" },
+  { id: "dm9", name: "Ragda Pattice", recipe: "", link: "" },
+  { id: "dm10", name: "Pizza", recipe: "", link: "" },
+  { id: "dm11", name: "Biryani", recipe: "", link: "" },
+  { id: "dm12", name: "Bruschetta", recipe: "", link: "" },
+  { id: "dm13", name: "Thai Curry", recipe: "", link: "https://youtu.be/xieenWcXdpg" },
+  { id: "dm14", name: "Burrito Bowl", recipe: "", link: "https://youtu.be/ESJnmZJa9T8" },
+  { id: "dm15", name: "Daal Dhokli", recipe: "", link: "" },
+  { id: "dm16", name: "Suti Khichdi", recipe: "", link: "" },
+  { id: "dm17", name: "Matar Pulao", recipe: "", link: "" },
+  { id: "dm18", name: "Mixed Veg Paratha", recipe: "", link: "" },
+  { id: "dm19", name: "Aloo Capsicum", recipe: "", link: "https://youtube.com/shorts/3xx37k4TNbc" },
+  { id: "dm20", name: "Corn Herbed Rice", recipe: "", link: "https://www.instagram.com/reel/DOQLRaKkyCL/" },
+];
+
+const INIT_DINNER_BASES = [
+  { id: "dbs1", name: "Daal Chawal", recipe: "", link: "" },
+  { id: "dbs2", name: "Roti", recipe: "", link: "" },
+  { id: "dbs3", name: "Rice", recipe: "", link: "" },
+  { id: "dbs4", name: "Rotla", recipe: "", link: "" },
+  { id: "dbs5", name: "Khichdi", recipe: "", link: "" },
+  { id: "dbs6", name: "Bhakri", recipe: "", link: "" },
+  { id: "dbs7", name: "Goli", recipe: "", link: "" },
+  { id: "dbs8", name: "Moong", recipe: "", link: "" },
+];
+
+const INIT_DINNER_SIDES = [
+  { id: "dsi1", name: "Sambhar", recipe: "", link: "" },
+  { id: "dsi2", name: "Chutney", recipe: "", link: "" },
+  { id: "dsi3", name: "Raita", recipe: "", link: "" },
+  { id: "dsi4", name: "Soup", recipe: "", link: "" },
+  { id: "dsi5", name: "Aloo Masala", recipe: "", link: "" },
+  { id: "dsi6", name: "Pesto Sauce", recipe: "", link: "" },
+  { id: "dsi7", name: "Aloo ki Sabji", recipe: "", link: "" },
+  { id: "dsi8", name: "Bhindi", recipe: "", link: "" },
+  { id: "dsi9", name: "Kheer", recipe: "", link: "" },
+  { id: "dsi10", name: "Sing", recipe: "", link: "" },
+];
+
+const INIT_ROTIS = [
+  { id: "r1", name: "Roti", recipe: "", link: "" },
+  { id: "r2", name: "Bhakri", recipe: "", link: "" },
+  { id: "r3", name: "Thepla", recipe: "", link: "" },
+  { id: "r4", name: "Rotla", recipe: "", link: "" },
+  { id: "r5", name: "Tandoori Roti", recipe: "", link: "" },
+  { id: "r6", name: "Naan", recipe: "", link: "" },
+];
+
+const INIT_RICES = [
+  { id: "rc1", name: "Steamed Rice", recipe: "", link: "" },
+  { id: "rc2", name: "Jeera Rice", recipe: "", link: "" },
+  { id: "rc3", name: "Khichdi", recipe: "", link: "" },
+  { id: "rc4", name: "Pulao", recipe: "", link: "" },
+  { id: "rc5", name: "Ram Khichdi", recipe: "", link: "" },
+  { id: "rc6", name: "Corn Rice", recipe: "", link: "" },
+  { id: "rc7", name: "Mexican Rice", recipe: "", link: "" },
+];
+
+// ─── HELPERS ──────────────────────────────────────────────────────────────────
+const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+// Distinct colour for each day Mon–Sun (index 0 = Monday slot)
+const DAY_COLORS = [
+  { header: "#FF6B6B", light: "#FFF0F0", border: "#FF6B6B" }, // Mon – coral red
+  { header: "#F7971E", light: "#FFF8EE", border: "#F7971E" }, // Tue – orange
+  { header: "#11998E", light: "#E8FAF8", border: "#11998E" }, // Wed – teal
+  { header: "#6C63FF", light: "#F0EFFF", border: "#6C63FF" }, // Thu – purple
+  { header: "#E91E8C", light: "#FEF0F8", border: "#E91E8C" }, // Fri – pink
+  { header: "#2196F3", light: "#E8F4FF", border: "#2196F3" }, // Sat – sky blue
+  { header: "#43A047", light: "#EDFAEE", border: "#43A047" }, // Sun – green
+];
+const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+function getWeekDates(weekOffset) {
+  const now = new Date();
+  const day = now.getDay();
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - ((day === 0 ? 7 : day) - 1) + weekOffset * 7);
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    return d;
+  });
+}
+
+function dateKey(d) {
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+}
+
+function formatDate(d) {
+  return `${DAY_NAMES[d.getDay()]} ${d.getDate()} ${MONTH_NAMES[d.getMonth()]}`;
+}
+
+function isToday(d) {
+  const t = new Date();
+  return d.getDate() === t.getDate() && d.getMonth() === t.getMonth() && d.getFullYear() === t.getFullYear();
+}
+
+function alpha(arr) {
+  return [...arr].sort((a, b) => a.name.localeCompare(b.name));
+}
+
+// ─── STORAGE HOOK ─────────────────────────────────────────────────────────────
+function useStorage(key, initial) {
+  const [data, setData] = useState(initial);
+  const [loaded, setLoaded] = useState(false);
+  const dataRef = React.useRef(data);
+
+  useEffect(() => {
+    dataRef.current = data;
+  }, [data]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await window.storage.get(key);
+        if (res && res.value) {
+          const parsed = JSON.parse(res.value);
+          setData(parsed);
+          dataRef.current = parsed;
+        }
+      } catch {}
+      setLoaded(true);
+    })();
+  }, [key]);
+
+  const save = useCallback(async (val) => {
+    const next = typeof val === "function" ? val(dataRef.current) : val;
+    dataRef.current = next;
+    setData(next);
+    try { await window.storage.set(key, JSON.stringify(next)); } catch {}
+  }, [key]);
+
+  return [data, save, loaded];
+}
+
+// ─── STYLES ───────────────────────────────────────────────────────────────────
+const S = {
+  app: {
+    fontFamily: "'Nunito', sans-serif",
+    background: "#F0F2F5",
+    minHeight: "100vh",
+    maxWidth: 480,
+    margin: "0 auto",
+    paddingBottom: 80,
+    position: "relative",
+  },
+  header: {
+    background: "#1877F2",
+    color: "#fff",
+    padding: "14px 16px 10px",
+    position: "sticky",
+    top: 0,
+    zIndex: 100,
+    boxShadow: "0 2px 8px rgba(24,119,242,0.3)",
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 800,
+    letterSpacing: -0.5,
+    margin: 0,
+  },
+  headerSub: {
+    fontSize: 12,
+    opacity: 0.85,
+    marginTop: 1,
+  },
+  weekNav: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    background: "#fff",
+    padding: "10px 16px",
+    borderBottom: "1px solid #E4E6EB",
+    position: "sticky",
+    top: 64,
+    zIndex: 99,
+  },
+  weekLabel: {
+    fontWeight: 700,
+    fontSize: 14,
+    color: "#1C1E21",
+  },
+  navBtn: {
+    background: "#E7F3FF",
+    border: "none",
+    borderRadius: 8,
+    padding: "6px 12px",
+    cursor: "pointer",
+    color: "#1877F2",
+    fontWeight: 700,
+    fontSize: 16,
+  },
+  todayBtn: {
+    background: "#1877F2",
+    color: "#fff",
+    border: "none",
+    borderRadius: 8,
+    padding: "5px 10px",
+    fontSize: 11,
+    fontWeight: 700,
+    cursor: "pointer",
+  },
+  dayCard: {
+    background: "#fff",
+    margin: "12px 12px",
+    borderRadius: 16,
+    overflow: "hidden",
+    boxShadow: "0 2px 8px rgba(0,0,0,0.10)",
+    border: "2px solid #E4E6EB",
+  },
+  dayCardToday: {
+    boxShadow: "0 4px 16px rgba(0,0,0,0.18)",
+  },
+  dayHeader: {
+    padding: "11px 16px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderBottom: "1px solid rgba(255,255,255,0.3)",
+  },
+  dayHeaderToday: {},
+  dayName: {
+    fontWeight: 900,
+    fontSize: 17,
+    color: "#fff",
+    textShadow: "0 1px 3px rgba(0,0,0,0.2)",
+  },
+  dayDate: {
+    fontSize: 14,
+    color: "rgba(255,255,255,0.9)",
+    marginLeft: 7,
+    fontWeight: 600,
+  },
+  todayBadge: {
+    background: "rgba(255,255,255,0.3)",
+    color: "#fff",
+    borderRadius: 10,
+    padding: "3px 10px",
+    fontSize: 12,
+    fontWeight: 800,
+    border: "1.5px solid rgba(255,255,255,0.6)",
+  },
+  slotRow: {
+    padding: "10px 16px",
+    borderBottom: "1px solid #F0F2F5",
+    minHeight: 52,
+  },
+  slotLabel: {
+    fontSize: 12,
+    fontWeight: 800,
+    color: "#65676B",
+    textTransform: "uppercase",
+    letterSpacing: 0.6,
+    marginBottom: 6,
+    display: "flex",
+    alignItems: "center",
+    gap: 5,
+  },
+  addBtn: {
+    background: "#E7F3FF",
+    border: "1.5px dashed #1877F2",
+    borderRadius: 10,
+    padding: "9px 14px",
+    color: "#1877F2",
+    fontSize: 14,
+    fontWeight: 700,
+    cursor: "pointer",
+    width: "100%",
+    textAlign: "left",
+  },
+  mealTag: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 4,
+    background: "#F0F2F5",
+    border: "1px solid #E4E6EB",
+    borderRadius: 20,
+    padding: "5px 12px",
+    fontSize: 14,
+    fontWeight: 600,
+    color: "#1C1E21",
+    margin: "2px 4px 2px 0",
+    cursor: "pointer",
+  },
+  mealTagLiked: {
+    background: "#E7F3FF",
+    borderColor: "#1877F2",
+    color: "#1877F2",
+  },
+  mealTagDisliked: {
+    background: "#FFF0F1",
+    borderColor: "#E41E3F",
+    color: "#E41E3F",
+  },
+  bottomNav: {
+    position: "fixed",
+    bottom: 0,
+    left: "50%",
+    transform: "translateX(-50%)",
+    width: "100%",
+    maxWidth: 480,
+    background: "#fff",
+    borderTop: "1px solid #E4E6EB",
+    display: "flex",
+    zIndex: 200,
+  },
+  navItem: {
+    flex: 1,
+    padding: "10px 0 8px",
+    border: "none",
+    background: "none",
+    cursor: "pointer",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: 2,
+    fontSize: 12,
+    fontWeight: 700,
+    color: "#65676B",
+    fontFamily: "'Nunito', sans-serif",
+  },
+  navItemActive: {
+    color: "#1877F2",
+  },
+  modal: {
+    position: "fixed",
+    inset: 0,
+    background: "rgba(0,0,0,0.5)",
+    zIndex: 300,
+    display: "flex",
+    alignItems: "flex-end",
+    justifyContent: "center",
+  },
+  modalBox: {
+    background: "#fff",
+    borderRadius: "20px 20px 0 0",
+    width: "100%",
+    maxWidth: 480,
+    maxHeight: "88vh",
+    overflow: "hidden",
+    display: "flex",
+    flexDirection: "column",
+  },
+  modalHeader: {
+    padding: "14px 16px 10px",
+    borderBottom: "1px solid #E4E6EB",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    flexShrink: 0,
+  },
+  modalTitle: {
+    fontWeight: 800,
+    fontSize: 18,
+    color: "#1C1E21",
+  },
+  modalClose: {
+    background: "#F0F2F5",
+    border: "none",
+    borderRadius: 50,
+    width: 30,
+    height: 30,
+    cursor: "pointer",
+    fontSize: 16,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalBody: {
+    overflowY: "auto",
+    flex: 1,
+    padding: "0 0 8px",
+  },
+  tabBar: {
+    display: "flex",
+    borderBottom: "1px solid #E4E6EB",
+    padding: "0 16px",
+    gap: 0,
+    flexShrink: 0,
+  },
+  tab: {
+    padding: "10px 14px",
+    border: "none",
+    background: "none",
+    fontWeight: 700,
+    fontSize: 13,
+    color: "#65676B",
+    cursor: "pointer",
+    borderBottom: "2.5px solid transparent",
+    fontFamily: "'Nunito', sans-serif",
+  },
+  tabActive: {
+    color: "#1877F2",
+    borderBottomColor: "#1877F2",
+  },
+  listItem: {
+    padding: "10px 16px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderBottom: "1px solid #F0F2F5",
+    cursor: "pointer",
+    gap: 8,
+  },
+  listItemName: {
+    fontWeight: 600,
+    fontSize: 16,
+    color: "#1C1E21",
+    flex: 1,
+  },
+  listItemSub: {
+    fontSize: 13,
+    color: "#65676B",
+    marginTop: 1,
+  },
+  selectBtn: {
+    background: "#1877F2",
+    color: "#fff",
+    border: "none",
+    borderRadius: 8,
+    padding: "7px 14px",
+    fontSize: 14,
+    fontWeight: 700,
+    cursor: "pointer",
+  },
+  selectedBtn: {
+    background: "#E41E3F",
+    color: "#fff",
+    border: "none",
+    borderRadius: 8,
+    padding: "7px 14px",
+    fontSize: 14,
+    fontWeight: 700,
+    cursor: "pointer",
+  },
+  warnBadge: {
+    background: "#FFF3CD",
+    color: "#856404",
+    borderRadius: 6,
+    padding: "1px 6px",
+    fontSize: 10,
+    fontWeight: 700,
+  },
+  doneBtn: {
+    margin: "12px 16px",
+    background: "#1877F2",
+    color: "#fff",
+    border: "none",
+    borderRadius: 12,
+    padding: "12px",
+    fontSize: 15,
+    fontWeight: 800,
+    cursor: "pointer",
+    width: "calc(100% - 32px)",
+  },
+  sectionHead: {
+    padding: "10px 16px 4px",
+    fontSize: 11,
+    fontWeight: 800,
+    color: "#1877F2",
+    textTransform: "uppercase",
+    letterSpacing: 0.6,
+    background: "#F8F9FF",
+  },
+  feedbackRow: {
+    display: "flex",
+    gap: 6,
+    marginTop: 4,
+  },
+  fbBtn: {
+    border: "1.5px solid #E4E6EB",
+    background: "#fff",
+    borderRadius: 8,
+    padding: "3px 10px",
+    fontSize: 13,
+    cursor: "pointer",
+  },
+  fbBtnActive: {
+    background: "#E7F3FF",
+    borderColor: "#1877F2",
+  },
+  input: {
+    width: "100%",
+    border: "1.5px solid #E4E6EB",
+    borderRadius: 10,
+    padding: "9px 12px",
+    fontSize: 14,
+    fontFamily: "'Nunito', sans-serif",
+    outline: "none",
+    boxSizing: "border-box",
+    color: "#1C1E21",
+  },
+  textarea: {
+    width: "100%",
+    border: "1.5px solid #E4E6EB",
+    borderRadius: 10,
+    padding: "9px 12px",
+    fontSize: 13,
+    fontFamily: "'Nunito', sans-serif",
+    outline: "none",
+    boxSizing: "border-box",
+    resize: "vertical",
+    minHeight: 80,
+    color: "#1C1E21",
+  },
+  manageSection: {
+    padding: "12px 14px",
+    borderBottom: "1px solid #E4E6EB",
+  },
+  manageSectionTitle: {
+    fontWeight: 800,
+    fontSize: 14,
+    color: "#1C1E21",
+    marginBottom: 8,
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+  },
+  manageItem: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "6px 0",
+    borderBottom: "1px solid #F0F2F5",
+  },
+  deleteBtn: {
+    background: "#FFF0F1",
+    color: "#E41E3F",
+    border: "none",
+    borderRadius: 6,
+    padding: "3px 8px",
+    fontSize: 11,
+    cursor: "pointer",
+    fontWeight: 700,
+  },
+  editBtn: {
+    background: "#E7F3FF",
+    color: "#1877F2",
+    border: "none",
+    borderRadius: 6,
+    padding: "3px 8px",
+    fontSize: 11,
+    cursor: "pointer",
+    fontWeight: 700,
+    marginRight: 4,
+  },
+  addNewBtn: {
+    background: "#1877F2",
+    color: "#fff",
+    border: "none",
+    borderRadius: 10,
+    padding: "8px 14px",
+    fontSize: 13,
+    fontWeight: 700,
+    cursor: "pointer",
+    marginTop: 8,
+  },
+  comboTag: {
+    display: "inline-block",
+    background: "#F0F2F5",
+    borderRadius: 6,
+    padding: "2px 7px",
+    fontSize: 11,
+    color: "#65676B",
+    margin: "1px 2px",
+  },
+  catBadge: {
+    fontSize: 10,
+    fontWeight: 700,
+    padding: "2px 7px",
+    borderRadius: 10,
+    background: "#E7F3FF",
+    color: "#1877F2",
+  },
+};
+
+// Category colors for dinner
+const CAT_COLORS = {
+  "South Indian": { bg: "#FFF4E6", col: "#E67E22" },
+  "Gujarati": { bg: "#E8F8F0", col: "#27AE60" },
+  "Street Food": { bg: "#FFF0F1", col: "#E41E3F" },
+  "International": { bg: "#F3E8FF", col: "#8E44AD" },
+  "Festive": { bg: "#FEF9E7", col: "#F39C12" },
+};
+
+// ─── MAIN APP ─────────────────────────────────────────────────────────────────
+function App() {
+  const [tab, setTab] = useState("planner");
+  const [weekOffset, setWeekOffset] = useState(0);
+  const [plan, savePlan] = useStorage("family-meal-plan-v1", {});
+  const [feedback, saveFeedback] = useStorage("family-meal-feedback-v1", {});
+  const [regularBreakfasts, saveRegularBreakfasts] = useStorage("family-regular-breakfasts-v1", INIT_REGULAR_BREAKFASTS);
+  const [guestBreakfasts, saveGuestBreakfasts] = useStorage("family-guest-breakfasts-v1", INIT_GUEST_BREAKFASTS);
+  const [daals, saveDaals] = useStorage("family-daals-v1", INIT_DAALS);
+  const [sabjis, saveSabjis] = useStorage("family-sabjis-v1", INIT_SABJIS);
+  const [dinnerCombos, saveDinnerCombos] = useStorage("family-dinner-combos-v1", INIT_DINNER_COMBOS);
+  const [dinnerMains, saveDinnerMains] = useStorage("family-dinner-mains-v1", INIT_DINNER_MAINS);
+  const [dinnerBases, saveDinnerBases] = useStorage("family-dinner-bases-v1", INIT_DINNER_BASES);
+  const [dinnerSides, saveDinnerSides] = useStorage("family-dinner-sides-v1", INIT_DINNER_SIDES);
+  const [rotis, saveRotis] = useStorage("family-rotis-v1", INIT_ROTIS);
+  const [rices, saveRices] = useStorage("family-rices-v1", INIT_RICES);
+
+  // Picker state
+  const [picker, setPicker] = useState(null); // { dateKey, slot }
+  const [pickerSel, setPickerSel] = useState({}); // selections in progress
+
+  const weekDates = getWeekDates(weekOffset);
+  const weekLabel = `${weekDates[0].getDate()} ${MONTH_NAMES[weekDates[0].getMonth()]} – ${weekDates[6].getDate()} ${MONTH_NAMES[weekDates[6].getMonth()]} ${weekDates[6].getFullYear()}`;
+
+  function openPicker(dk, slot) {
+    const existing = plan[dk]?.[slot] || {};
+    setPickerSel(existing);
+    setPicker({ dk, slot });
+  }
+
+  function closePicker() {
+    setPicker(null);
+    setPickerSel({});
+  }
+
+  function autoSave(newSel) {
+    if (!picker) return;
+    setPickerSel(newSel);
+    savePlan(prev => ({
+      ...prev,
+      [picker.dk]: {
+        ...(prev[picker.dk] || {}),
+        [picker.slot]: newSel,
+      },
+    }));
+  }
+
+  function clearMeal(dk, slot) {
+    savePlan(prev => {
+      const next = { ...prev };
+      if (next[dk]) {
+        next[dk] = { ...next[dk] };
+        delete next[dk][slot];
+      }
+      return next;
+    });
+  }
+
+  function setFeedback(mealKey, val) {
+    saveFeedback(prev => ({ ...prev, [mealKey]: prev[mealKey] === val ? null : val }));
+  }
+
+  function getFeedbackKey(dk, slot) { return `${dk}__${slot}`; }
+
+  function hasMeal(dk, slot) {
+    const m = plan[dk]?.[slot];
+    if (!m) return false;
+    if (slot === "breakfast") return !!(m.item || (m.items && m.items.length));
+    if (slot === "lunch") return !!(m.daal || (m.daals && m.daals.length) || (m.sabjis && m.sabjis.length));
+    if (slot === "dinner" || slot === "guestDinner") return !!(m.combo || (m.mains && m.mains.length));
+    return false;
+  }
+
+  function getMealLabel(dk, slot) {
+    const m = plan[dk]?.[slot];
+    if (!m) return "";
+    if (slot === "breakfast") {
+      const items = m.items || (m.item ? [m.item] : []);
+      return items.join(" + ");
+    }
+    if (slot === "lunch") {
+      const parts = [];
+      const daals = m.daals || (m.daal ? [m.daal] : []);
+      if (daals.length) parts.push(...daals);
+      if (m.sabjis) parts.push(...m.sabjis);
+      if (m.rotis) parts.push(...m.rotis);
+      if (m.rice) parts.push(m.rice);
+      return parts.join(" + ");
+    }
+    if (slot === "dinner" || slot === "guestDinner") {
+      if (m.combo) {
+        const parts = [m.combo];
+        if (m.rotis) parts.push(...m.rotis);
+        if (m.rice) parts.push(m.rice);
+        return parts.join(" + ");
+      }
+      const parts = [...(m.mains || []), ...(m.bases || []), ...(m.sides || [])];
+      if (m.rotis) parts.push(...m.rotis);
+      if (m.rice) parts.push(m.rice);
+      return parts.join(" + ");
+    }
+    return "";
+  }
+
+  const slots = [
+    { key: "breakfast", emoji: "🌅", label: "Breakfast" },
+    { key: "lunch", emoji: "☀️", label: "Lunch" },
+    { key: "dinner", emoji: "🌙", label: "Dinner" },
+  ];
+
+  return (
+    <>
+      <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+      <div style={S.app}>
+        {/* Header */}
+        <div style={S.header}>
+          <div style={S.headerTitle}>🍽️ Family Meal Planner</div>
+          <div style={S.headerSub}>Plan your week, enjoy every meal</div>
+        </div>
+
+        {/* Bottom Nav */}
+        <div style={S.bottomNav}>
+          {[
+            { key: "planner", emoji: "📅", label: "Planner" },
+            { key: "meals", emoji: "🍛", label: "Meals" },
+            { key: "manage", emoji: "⚙️", label: "Manage" },
+          ].map(n => (
+            <button key={n.key} style={{ ...S.navItem, ...(tab === n.key ? S.navItemActive : {}) }} onClick={() => setTab(n.key)}>
+              <span style={{ fontSize: 20 }}>{n.emoji}</span>
+              {n.label}
+            </button>
+          ))}
+        </div>
+
+        {/* ── PLANNER TAB ── */}
+        {tab === "planner" && (
+          <>
+            <div style={S.weekNav}>
+              <button style={S.navBtn} onClick={() => setWeekOffset(o => o - 1)}>‹</button>
+              <div style={{ textAlign: "center" }}>
+                <div style={S.weekLabel}>{weekLabel}</div>
+                {weekOffset !== 0 && (
+                  <button style={{ ...S.todayBtn, marginTop: 3 }} onClick={() => setWeekOffset(0)}>This Week</button>
+                )}
+              </div>
+              <button style={S.navBtn} onClick={() => setWeekOffset(o => o + 1)}>›</button>
+            </div>
+
+            {weekDates.map((d, dayIdx) => {
+              const dk = dateKey(d);
+              const today = isToday(d);
+              const dc = DAY_COLORS[dayIdx % 7];
+              return (
+                <div key={dk} style={{ ...S.dayCard, border: `2.5px solid ${dc.border}`, background: dc.light, ...(today ? { boxShadow: `0 4px 18px ${dc.border}55` } : {}) }}>
+                  <div style={{ ...S.dayHeader, background: dc.header }}>
+                    <div>
+                      <span style={S.dayName}>{DAY_NAMES[d.getDay()]}</span>
+                      <span style={S.dayDate}>{d.getDate()} {MONTH_NAMES[d.getMonth()]}</span>
+                    </div>
+                    {today && <span style={S.todayBadge}>TODAY</span>}
+                  </div>
+
+                  {slots.map(sl => {
+                    const has = hasMeal(dk, sl.key);
+                    const label = getMealLabel(dk, sl.key);
+                    const fbKey = getFeedbackKey(dk, sl.key);
+                    const fb = feedback[fbKey];
+                    const m = plan[dk]?.[sl.key];
+
+                    // Dislike warning
+                    let warned = false;
+                    if (has && m) {
+                      const checkNames = [];
+                      if (sl.key === "breakfast" && m.item) checkNames.push(m.item);
+                      if (sl.key === "lunch") { if (m.daal) checkNames.push(m.daal); if (m.sabjis) checkNames.push(...m.sabjis); }
+                      if (sl.key === "dinner") { if (m.combo) checkNames.push(m.combo); if (m.mains) checkNames.push(...m.mains); }
+                      warned = checkNames.some(n => feedback[`dislike__${n}`] === true);
+                    }
+
+                    return (
+                      <div key={sl.key} style={{ ...S.slotRow, background: "#fff" }}>
+                        <div style={S.slotLabel}>
+                          <span>{sl.emoji}</span> {sl.label}
+                          {warned && <span style={S.warnBadge}>⚠️ Family didn't enjoy this before</span>}
+                        </div>
+                        {!has ? (
+                          <button style={S.addBtn} onClick={() => openPicker(dk, sl.key)}>
+                            + Add {sl.label}
+                          </button>
+                        ) : (
+                          <div>
+                            <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 2 }}>
+                              {label.split(" + ").map((part, i) => (
+                                <span key={i} style={S.mealTag}>{part}</span>
+                              ))}
+                              <button style={{ ...S.mealTag, background: "#F0F2F5", fontSize: 11, color: "#65676B" }}
+                                onClick={() => openPicker(dk, sl.key)}>✏️</button>
+                              <button style={{ ...S.mealTag, background: "#FFF0F1", fontSize: 11, color: "#E41E3F" }}
+                                onClick={() => clearMeal(dk, sl.key)}>✕</button>
+                            </div>
+                            <div style={S.feedbackRow}>
+                              <button style={{ ...S.fbBtn, ...(fb === "liked" ? S.fbBtnActive : {}) }}
+                                onClick={() => setFeedback(fbKey, "liked")}>👍</button>
+                              <button style={{ ...S.fbBtn, ...(fb === "disliked" ? { background: "#FFF0F1", borderColor: "#E41E3F" } : {}) }}
+                                onClick={() => {
+                                  setFeedback(fbKey, "disliked");
+                                  if (m) {
+                                    const names = [];
+                                    if (sl.key === "breakfast" && m.item) names.push(m.item);
+                                    if (sl.key === "lunch") { if (m.daal) names.push(m.daal); if (m.sabjis) names.push(...m.sabjis); }
+                                    if (sl.key === "dinner") { if (m.combo) names.push(m.combo); if (m.mains) names.push(...m.mains); }
+                                    const upd = { ...feedback, [fbKey]: "disliked" };
+                                    names.forEach(n => { upd[`dislike__${n}`] = true; });
+                                    saveFeedback(upd);
+                                  }
+                                }}>👎</button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+
+                  {/* ── GUEST DINNER SLOT (4th, hidden unless added) ── */}
+                  {(() => {
+                    const hasGD = hasMeal(dk, "guestDinner");
+                    const gdLabel = getMealLabel(dk, "guestDinner");
+                    const gdFbKey = getFeedbackKey(dk, "guestDinner");
+                    const gdFb = feedback[gdFbKey];
+                    return (
+                      <div style={{ ...S.slotRow, background: "#FFF8EE", borderTop: "2px dashed #F7971E" }}>
+                        <div style={{ ...S.slotLabel, color: "#F7971E" }}>
+                          <span>👥</span> Guest Dinner
+                        </div>
+                        {!hasGD ? (
+                          <button style={{ ...S.addBtn, background: "#FFF3E0", borderColor: "#F7971E", color: "#F7971E" }}
+                            onClick={() => openPicker(dk, "guestDinner")}>
+                            + Add Guest Dinner
+                          </button>
+                        ) : (
+                          <div>
+                            <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 2 }}>
+                              {gdLabel.split(" + ").map((part, i) => (
+                                <span key={i} style={{ ...S.mealTag, background: "#FFF3E0", borderColor: "#F7971E", color: "#E65100" }}>{part}</span>
+                              ))}
+                              <button style={{ ...S.mealTag, background: "#F0F2F5", fontSize: 11, color: "#65676B" }}
+                                onClick={() => openPicker(dk, "guestDinner")}>✏️</button>
+                              <button style={{ ...S.mealTag, background: "#FFF0F1", fontSize: 11, color: "#E41E3F" }}
+                                onClick={() => clearMeal(dk, "guestDinner")}>✕</button>
+                            </div>
+                            <div style={S.feedbackRow}>
+                              <button style={{ ...S.fbBtn, ...(gdFb === "liked" ? S.fbBtnActive : {}) }}
+                                onClick={() => setFeedback(gdFbKey, "liked")}>👍</button>
+                              <button style={{ ...S.fbBtn, ...(gdFb === "disliked" ? { background: "#FFF0F1", borderColor: "#E41E3F" } : {}) }}
+                                onClick={() => setFeedback(gdFbKey, "disliked")}>👎</button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
+              );
+            })}
+          </>
+        )}
+
+        {/* ── MEALS BROWSE TAB ── */}
+        {tab === "meals" && (
+          <MealsBrowse
+            regularBreakfasts={regularBreakfasts} guestBreakfasts={guestBreakfasts}
+            daals={daals} sabjis={sabjis}
+            dinnerCombos={dinnerCombos} dinnerMains={dinnerMains}
+            dinnerBases={dinnerBases} dinnerSides={dinnerSides}
+            feedback={feedback}
+          />
+        )}
+
+        {/* ── MANAGE TAB ── */}
+        {tab === "manage" && (
+          <ManageTab
+            regularBreakfasts={regularBreakfasts} saveRegularBreakfasts={saveRegularBreakfasts}
+            guestBreakfasts={guestBreakfasts} saveGuestBreakfasts={saveGuestBreakfasts}
+            daals={daals} saveDaals={saveDaals}
+            sabjis={sabjis} saveSabjis={saveSabjis}
+            dinnerCombos={dinnerCombos} saveDinnerCombos={saveDinnerCombos}
+            dinnerMains={dinnerMains} saveDinnerMains={saveDinnerMains}
+            dinnerBases={dinnerBases} saveDinnerBases={saveDinnerBases}
+            dinnerSides={dinnerSides} saveDinnerSides={saveDinnerSides}
+            rotis={rotis} saveRotis={saveRotis}
+            rices={rices} saveRices={saveRices}
+            plan={plan} savePlan={savePlan}
+            feedback={feedback} saveFeedback={saveFeedback}
+          />
+        )}
+
+        {/* ── PICKER MODAL ── */}
+        {picker && (
+          <div style={S.modal} onClick={e => { if (e.target === e.currentTarget) closePicker(); }}>
+            <div style={S.modalBox}>
+              <div style={S.modalHeader}>
+                <div style={S.modalTitle}>
+                  {picker.slot === "breakfast" ? "🌅 Choose Breakfast"
+                    : picker.slot === "lunch" ? "☀️ Choose Lunch"
+                    : picker.slot === "guestDinner" ? "👥 Choose Guest Dinner"
+                    : "🌙 Choose Dinner"}
+                </div>
+                <button style={S.modalClose} onClick={closePicker}>✕</button>
+              </div>
+
+              {picker.slot === "breakfast" && (
+                <BreakfastPicker regularItems={regularBreakfasts} guestItems={guestBreakfasts} sel={pickerSel} setSel={autoSave} feedback={feedback} />
+              )}
+              {picker.slot === "lunch" && (
+                <LunchPicker daals={daals} sabjis={sabjis} rotis={rotis} rices={rices} sel={pickerSel} setSel={autoSave} feedback={feedback} />
+              )}
+              {(picker.slot === "dinner" || picker.slot === "guestDinner") && (
+                <DinnerPicker combos={dinnerCombos} mains={dinnerMains} bases={dinnerBases} sides={dinnerSides}
+                  rotis={rotis} rices={rices} sel={pickerSel} setSel={autoSave} feedback={feedback} />
+              )}
+
+              <button style={{ margin: "10px 16px", background: "#F0F2F5", color: "#65676B", border: "none", borderRadius: 12, padding: "11px", fontSize: 14, fontWeight: 800, cursor: "pointer" }} onClick={closePicker}>✕ Close</button>
+            </div>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+// ─── BREAKFAST PICKER ─────────────────────────────────────────────────────────
+function BreakfastPicker({ regularItems, guestItems, sel, setSel, feedback }) {
+  const [subTab, setSubTab] = useState("regular");
+  const items = subTab === "regular" ? regularItems : guestItems;
+  const selItems = sel.items || (sel.item ? [sel.item] : []); // backwards compat
+
+  function toggleItem(name) {
+    const newItems = selItems.includes(name)
+      ? selItems.filter(i => i !== name)
+      : [...selItems, name];
+    setSel({ ...sel, items: newItems, item: undefined });
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", overflow: "hidden", flex: 1 }}>
+      <div style={S.tabBar}>
+        <button style={{ ...S.tab, ...(subTab === "regular" ? S.tabActive : {}) }} onClick={() => setSubTab("regular")}>
+          ☀️ Regular
+        </button>
+        <button style={{ ...S.tab, ...(subTab === "guest" ? S.tabActive : {}) }} onClick={() => setSubTab("guest")}>
+          👥 Guest
+        </button>
+      </div>
+      {selItems.length > 0 && (
+        <div style={{ padding: "6px 14px", background: "#E7F3FF", fontSize: 12, fontWeight: 700, color: "#1877F2" }}>
+          🌅 {selItems.join(" + ")}
+        </div>
+      )}
+      <div style={S.modalBody}>
+        {alpha(items).map(it => {
+          const disliked = feedback[`dislike__${it.name}`];
+          const selected = selItems.includes(it.name);
+          return (
+            <div key={it.id} style={S.listItem} onClick={() => toggleItem(it.name)}>
+              <div style={{ flex: 1 }}>
+                <div style={S.listItemName}>{it.name}</div>
+                {disliked && <span style={S.warnBadge}>⚠️ Family didn't enjoy before</span>}
+              </div>
+              {it.link && <a href={it.link} target="_blank" rel="noreferrer" style={{ color: "#1877F2", fontSize: 20, marginRight: 8 }} onClick={e => e.stopPropagation()}>📹</a>}
+              <button style={selected ? S.selectedBtn : S.selectBtn} onClick={e => { e.stopPropagation(); toggleItem(it.name); }}>
+                {selected ? "✓ Remove" : "Add"}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── LUNCH PICKER ─────────────────────────────────────────────────────────────
+function LunchPicker({ daals, sabjis, rotis, rices, sel, setSel, feedback }) {
+  const [subTab, setSubTab] = useState("daal");
+  const cats = ["Marwari", "Punjabi", "Green"];
+  const selDaals = sel.daals || (sel.daal ? [sel.daal] : []); // backwards compat
+  const selSabjis = sel.sabjis || [];
+  const selRotis = sel.rotis || [];
+
+  function toggleDaal(name) {
+    const newDaals = selDaals.includes(name)
+      ? selDaals.filter(d => d !== name)
+      : [...selDaals, name];
+    setSel({ ...sel, daals: newDaals, daal: undefined });
+  }
+
+  function toggleSabji(name) {
+    const newSabjis = selSabjis.includes(name)
+      ? selSabjis.filter(s => s !== name)
+      : selSabjis.length < 3 ? [...selSabjis, name] : selSabjis;
+    setSel({ ...sel, sabjis: newSabjis });
+  }
+
+  function toggleRoti(name) {
+    const newRotis = selRotis.includes(name)
+      ? selRotis.filter(r => r !== name)
+      : [...selRotis, name];
+    setSel({ ...sel, rotis: newRotis });
+  }
+
+  const tabs = [
+    { key: "daal", label: "🥣 Daal" },
+    { key: "Marwari", label: "Marwari" },
+    { key: "Punjabi", label: "Punjabi" },
+    { key: "Green", label: "Green" },
+    { key: "roti", label: "🫓 Roti" },
+    { key: "rice", label: "🍚 Rice" },
+  ];
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", overflow: "hidden", flex: 1 }}>
+      <div style={{ ...S.tabBar, overflowX: "auto" }}>
+        {tabs.map(t => (
+          <button key={t.key} style={{ ...S.tab, whiteSpace: "nowrap", ...(subTab === t.key ? S.tabActive : {}) }} onClick={() => setSubTab(t.key)}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+      {/* Summary bar */}
+      {(selDaals.length > 0 || selSabjis.length > 0 || selRotis.length > 0 || sel.rice) && (
+        <div style={{ padding: "6px 14px", background: "#E7F3FF", fontSize: 12, fontWeight: 700, color: "#1877F2", flexWrap: "wrap" }}>
+          {selDaals.length > 0 && <span>🥣 {selDaals.join(", ")} </span>}
+          {selSabjis.length > 0 && <span>• 🥬 {selSabjis.join(", ")} </span>}
+          {selRotis.length > 0 && <span>• 🫓 {selRotis.join(", ")} </span>}
+          {sel.rice && <span>• 🍚 {sel.rice}</span>}
+        </div>
+      )}
+      <div style={S.modalBody}>
+        {subTab === "daal" && alpha(daals).map(d => {
+          const selected = selDaals.includes(d.name);
+          const disliked = feedback[`dislike__${d.name}`];
+          return (
+            <div key={d.id} style={S.listItem} onClick={() => toggleDaal(d.name)}>
+              <div style={{ flex: 1 }}>
+                <div style={S.listItemName}>{d.name}</div>
+                {disliked && <span style={S.warnBadge}>⚠️ Family didn't enjoy before</span>}
+              </div>
+              {d.link && <a href={d.link} target="_blank" rel="noreferrer" style={{ color: "#1877F2", fontSize: 16, marginRight: 8 }} onClick={e => e.stopPropagation()}>📹</a>}
+              <button style={selected ? S.selectedBtn : S.selectBtn} onClick={e => { e.stopPropagation(); toggleDaal(d.name); }}>
+                {selected ? "✓ Remove" : "Add"}
+              </button>
+            </div>
+          );
+        })}
+        {cats.includes(subTab) && alpha(sabjis).filter(s => s.category === subTab).map(s => {
+          const selected = selSabjis.includes(s.name);
+          const disliked = feedback[`dislike__${s.name}`];
+          const disabled = !selected && selSabjis.length >= 3;
+          return (
+            <div key={s.id} style={{ ...S.listItem, opacity: disabled ? 0.5 : 1 }} onClick={() => !disabled && toggleSabji(s.name)}>
+              <div style={{ flex: 1 }}>
+                <div style={S.listItemName}>{s.name}</div>
+                {disliked && <span style={S.warnBadge}>⚠️ Family didn't enjoy before</span>}
+              </div>
+              {s.link && <a href={s.link} target="_blank" rel="noreferrer" style={{ color: "#1877F2", fontSize: 16, marginRight: 8 }} onClick={e => e.stopPropagation()}>📹</a>}
+              <button style={selected ? S.selectedBtn : S.selectBtn} disabled={disabled} onClick={e => { e.stopPropagation(); !disabled && toggleSabji(s.name); }}>
+                {selected ? "✓ Remove" : "Add"}
+              </button>
+            </div>
+          );
+        })}
+        {subTab === "roti" && alpha(rotis).map(r => {
+          const selected = selRotis.includes(r.name);
+          return (
+            <div key={r.id} style={S.listItem} onClick={() => toggleRoti(r.name)}>
+              <div style={S.listItemName}>{r.name}</div>
+              <button style={selected ? S.selectedBtn : S.selectBtn} onClick={e => { e.stopPropagation(); toggleRoti(r.name); }}>
+                {selected ? "✓ Remove" : "Add"}
+              </button>
+            </div>
+          );
+        })}
+        {subTab === "rice" && alpha(rices).map(r => {
+          const selected = sel.rice === r.name;
+          return (
+            <div key={r.id} style={S.listItem} onClick={() => setSel({ ...sel, rice: selected ? undefined : r.name })}>
+              <div style={S.listItemName}>{r.name}</div>
+              <button style={selected ? S.selectedBtn : S.selectBtn} onClick={e => { e.stopPropagation(); setSel({ ...sel, rice: selected ? undefined : r.name }); }}>
+                {selected ? "✓" : "Pick"}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── DINNER PICKER ────────────────────────────────────────────────────────────
+function DinnerPicker({ combos, mains, bases, sides, rotis, rices, sel, setSel, feedback }) {
+  const [subTab, setSubTab] = useState("combos");
+  const selRotis = sel.rotis || [];
+
+  function toggleArr(key, name) {
+    const arr = sel[key] || [];
+    setSel({ ...sel, [key]: arr.includes(name) ? arr.filter(x => x !== name) : [...arr, name] });
+  }
+
+  function toggleRoti(name) {
+    const newRotis = selRotis.includes(name)
+      ? selRotis.filter(r => r !== name)
+      : [...selRotis, name];
+    setSel({ ...sel, rotis: newRotis });
+  }
+
+  function pickCombo(combo) {
+    const already = sel.combo === combo.name;
+    setSel(already ? { rotis: sel.rotis, rice: sel.rice } : { combo: combo.name, comboDetails: combo.components, rotis: sel.rotis, rice: sel.rice });
+  }
+
+  const cats = ["All", "South Indian", "Gujarati", "Street Food", "International", "Festive"];
+  const [catFilter, setCatFilter] = useState("All");
+  const filteredCombos = catFilter === "All" ? alpha(combos) : alpha(combos.filter(c => c.category === catFilter));
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", overflow: "hidden", flex: 1 }}>
+      <div style={{ ...S.tabBar, overflowX: "auto" }}>
+        <button style={{ ...S.tab, whiteSpace: "nowrap", ...(subTab === "combos" ? S.tabActive : {}) }} onClick={() => setSubTab("combos")}>📦 Combos</button>
+        <button style={{ ...S.tab, whiteSpace: "nowrap", ...(subTab === "individual" ? S.tabActive : {}) }} onClick={() => setSubTab("individual")}>🧩 Individual</button>
+        <button style={{ ...S.tab, whiteSpace: "nowrap", ...(subTab === "roti" ? S.tabActive : {}) }} onClick={() => setSubTab("roti")}>🫓 Roti</button>
+        <button style={{ ...S.tab, whiteSpace: "nowrap", ...(subTab === "rice" ? S.tabActive : {}) }} onClick={() => setSubTab("rice")}>🍚 Rice</button>
+      </div>
+
+      {/* Summary bar */}
+      {(sel.combo || selRotis.length > 0 || sel.rice) && (
+        <div style={{ padding: "6px 14px", background: "#E7F3FF", fontSize: 12, fontWeight: 700, color: "#1877F2" }}>
+          {sel.combo && <span>🍽️ {sel.combo} </span>}
+          {selRotis.length > 0 && <span>• 🫓 {selRotis.join(", ")} </span>}
+          {sel.rice && <span>• 🍚 {sel.rice}</span>}
+        </div>
+      )}
+
+      {subTab === "combos" && (
+        <>
+          <div style={{ display: "flex", gap: 6, padding: "8px 12px", overflowX: "auto", flexShrink: 0 }}>
+            {cats.map(c => (
+              <button key={c} onClick={() => setCatFilter(c)} style={{
+                whiteSpace: "nowrap", border: "none", borderRadius: 16, padding: "4px 12px",
+                fontSize: 11, fontWeight: 700, cursor: "pointer",
+                background: catFilter === c ? "#1877F2" : "#F0F2F5",
+                color: catFilter === c ? "#fff" : "#65676B",
+              }}>{c}</button>
+            ))}
+          </div>
+          <div style={S.modalBody}>
+            {filteredCombos.map(combo => {
+              const selected = sel.combo === combo.name;
+              const disliked = feedback[`dislike__${combo.name}`];
+              const cc = CAT_COLORS[combo.category] || { bg: "#F0F2F5", col: "#65676B" };
+              return (
+                <div key={combo.id} style={{ ...S.listItem, alignItems: "flex-start" }} onClick={() => pickCombo(combo)}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
+                      <div style={S.listItemName}>{combo.name}</div>
+                      <span style={{ ...S.catBadge, background: cc.bg, color: cc.col }}>{combo.category}</span>
+                    </div>
+                    <div>{combo.components.map((c, i) => <span key={i} style={S.comboTag}>{c}</span>)}</div>
+                    {disliked && <span style={{ ...S.warnBadge, display: "inline-block", marginTop: 3 }}>⚠️ Family didn't enjoy before</span>}
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, marginLeft: 8 }}>
+                    {combo.link && <a href={combo.link} target="_blank" rel="noreferrer" style={{ color: "#1877F2", fontSize: 16 }} onClick={e => e.stopPropagation()}>📹</a>}
+                    <button style={selected ? S.selectedBtn : S.selectBtn} onClick={e => { e.stopPropagation(); pickCombo(combo); }}>
+                      {selected ? "✓" : "Pick"}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+
+      {subTab === "individual" && (
+        <div style={S.modalBody}>
+          {[
+            { label: "🍽️ Mains", key: "mains", items: alpha(mains) },
+            { label: "🍚 Bases", key: "bases", items: alpha(bases) },
+            { label: "🥗 Sides", key: "sides", items: alpha(sides) },
+          ].map(grp => (
+            <div key={grp.key}>
+              <div style={S.sectionHead}>{grp.label}</div>
+              {grp.items.map(it => {
+                const arr = sel[grp.key] || [];
+                const selected = arr.includes(it.name);
+                const disliked = feedback[`dislike__${it.name}`];
+                return (
+                  <div key={it.id} style={S.listItem} onClick={() => toggleArr(grp.key, it.name)}>
+                    <div style={{ flex: 1 }}>
+                      <div style={S.listItemName}>{it.name}</div>
+                      {disliked && <span style={S.warnBadge}>⚠️ Family didn't enjoy before</span>}
+                    </div>
+                    {it.link && <a href={it.link} target="_blank" rel="noreferrer" style={{ color: "#1877F2", fontSize: 16, marginRight: 8 }} onClick={e => e.stopPropagation()}>📹</a>}
+                    <button style={selected ? S.selectedBtn : S.selectBtn} onClick={e => { e.stopPropagation(); toggleArr(grp.key, it.name); }}>
+                      {selected ? "✓ Remove" : "Add"}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {subTab === "roti" && (
+        <div style={S.modalBody}>
+          {alpha(rotis).map(r => {
+            const selected = selRotis.includes(r.name);
+            return (
+              <div key={r.id} style={S.listItem} onClick={() => toggleRoti(r.name)}>
+                <div style={S.listItemName}>{r.name}</div>
+                <button style={selected ? S.selectedBtn : S.selectBtn} onClick={e => { e.stopPropagation(); toggleRoti(r.name); }}>
+                  {selected ? "✓ Remove" : "Add"}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {subTab === "rice" && (
+        <div style={S.modalBody}>
+          {alpha(rices).map(r => {
+            const selected = sel.rice === r.name;
+            return (
+              <div key={r.id} style={S.listItem} onClick={() => setSel({ ...sel, rice: selected ? undefined : r.name })}>
+                <div style={S.listItemName}>{r.name}</div>
+                <button style={selected ? S.selectedBtn : S.selectBtn} onClick={e => { e.stopPropagation(); setSel({ ...sel, rice: selected ? undefined : r.name }); }}>
+                  {selected ? "✓" : "Pick"}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── MEALS BROWSE ─────────────────────────────────────────────────────────────
+function MealsBrowse({ regularBreakfasts, guestBreakfasts, daals, sabjis, dinnerCombos, dinnerMains, dinnerBases, dinnerSides, feedback }) {
+  const [tab, setTab] = useState("breakfast");
+  const [bfTab, setBfTab] = useState("regular");
+  const tabs = [
+    { key: "breakfast", label: "🌅 Breakfast" },
+    { key: "lunch", label: "☀️ Lunch" },
+    { key: "dinner", label: "🌙 Dinner" },
+  ];
+  const [sabjiCat, setSabjiCat] = useState("All");
+  const [dinnerSub, setDinnerSub] = useState("combos");
+
+  return (
+    <div>
+      <div style={S.tabBar}>
+        {tabs.map(t => (
+          <button key={t.key} style={{ ...S.tab, ...(tab === t.key ? S.tabActive : {}) }} onClick={() => setTab(t.key)}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === "breakfast" && (
+        <div>
+          <div style={S.tabBar}>
+            <button style={{ ...S.tab, ...(bfTab === "regular" ? S.tabActive : {}) }} onClick={() => setBfTab("regular")}>☀️ Regular ({regularBreakfasts.length})</button>
+            <button style={{ ...S.tab, ...(bfTab === "guest" ? S.tabActive : {}) }} onClick={() => setBfTab("guest")}>👥 Guest ({guestBreakfasts.length})</button>
+          </div>
+          {(bfTab === "regular" ? regularBreakfasts : guestBreakfasts).map(it => (
+            <div key={it.id} style={S.listItem}>
+              <div style={{ flex: 1 }}>
+                <div style={S.listItemName}>{it.name}</div>
+                {it.recipe && <div style={S.listItemSub}>📝 Recipe added</div>}
+              </div>
+              {it.link && <a href={it.link} target="_blank" rel="noreferrer" style={{ color: "#1877F2", fontSize: 20 }}>📹</a>}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {tab === "lunch" && (
+        <div>
+          <div style={S.sectionHead}>🥣 Daals ({daals.length})</div>
+          {daals.map(d => (
+            <div key={d.id} style={S.listItem}>
+              <div style={S.listItemName}>{d.name}</div>
+              {d.link && <a href={d.link} target="_blank" rel="noreferrer" style={{ color: "#1877F2", fontSize: 20 }}>📹</a>}
+            </div>
+          ))}
+          <div style={{ ...S.sectionHead, marginTop: 4 }}>🥬 Sabjis</div>
+          <div style={{ display: "flex", gap: 6, padding: "8px 12px", overflowX: "auto" }}>
+            {["All", "Marwari", "Punjabi", "Green"].map(c => (
+              <button key={c} onClick={() => setSabjiCat(c)} style={{
+                whiteSpace: "nowrap", border: "none", borderRadius: 16, padding: "4px 12px",
+                fontSize: 11, fontWeight: 700, cursor: "pointer",
+                background: sabjiCat === c ? "#1877F2" : "#F0F2F5",
+                color: sabjiCat === c ? "#fff" : "#65676B",
+              }}>{c}</button>
+            ))}
+          </div>
+          {sabjis.filter(s => sabjiCat === "All" || s.category === sabjiCat).map(s => (
+            <div key={s.id} style={S.listItem}>
+              <div style={{ flex: 1 }}>
+                <div style={S.listItemName}>{s.name}</div>
+                <div style={S.listItemSub}>{s.category}</div>
+              </div>
+              {s.link && <a href={s.link} target="_blank" rel="noreferrer" style={{ color: "#1877F2", fontSize: 20 }}>📹</a>}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {tab === "dinner" && (
+        <div>
+          <div style={S.tabBar}>
+            <button style={{ ...S.tab, ...(dinnerSub === "combos" ? S.tabActive : {}) }} onClick={() => setDinnerSub("combos")}>📦 Combos</button>
+            <button style={{ ...S.tab, ...(dinnerSub === "components" ? S.tabActive : {}) }} onClick={() => setDinnerSub("components")}>🧩 Components</button>
+          </div>
+          {dinnerSub === "combos" && dinnerCombos.map(c => {
+            const cc = CAT_COLORS[c.category] || { bg: "#F0F2F5", col: "#65676B" };
+            return (
+              <div key={c.id} style={S.listItem}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
+                    <div style={S.listItemName}>{c.name}</div>
+                    <span style={{ ...S.catBadge, background: cc.bg, color: cc.col }}>{c.category}</span>
+                  </div>
+                  <div>{c.components.map((x, i) => <span key={i} style={S.comboTag}>{x}</span>)}</div>
+                </div>
+                {c.link && <a href={c.link} target="_blank" rel="noreferrer" style={{ color: "#1877F2", fontSize: 20, marginLeft: 8 }}>📹</a>}
+              </div>
+            );
+          })}
+          {dinnerSub === "components" && (
+            <>
+              {[{ label: "🍽️ Mains", items: dinnerMains }, { label: "🍚 Bases", items: dinnerBases }, { label: "🥗 Sides", items: dinnerSides }].map(grp => (
+                <div key={grp.label}>
+                  <div style={S.sectionHead}>{grp.label}</div>
+                  {grp.items.map(it => (
+                    <div key={it.id} style={S.listItem}>
+                      <div style={S.listItemName}>{it.name}</div>
+                      {it.link && <a href={it.link} target="_blank" rel="noreferrer" style={{ color: "#1877F2", fontSize: 20 }}>📹</a>}
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── MANAGE TAB ───────────────────────────────────────────────────────────────
+function ManageTab({ regularBreakfasts, saveRegularBreakfasts, guestBreakfasts, saveGuestBreakfasts, daals, saveDaals, sabjis, saveSabjis, dinnerCombos, saveDinnerCombos, dinnerMains, saveDinnerMains, dinnerBases, saveDinnerBases, dinnerSides, saveDinnerSides, rotis, saveRotis, rices, saveRices, plan, savePlan, feedback, saveFeedback }) {
+  const [section, setSection] = useState("backup");
+  const [editItem, setEditItem] = useState(null);
+  const [addMode, setAddMode] = useState(false);
+  const [form, setForm] = useState({ name: "", recipe: "", link: "", category: "Green" });
+  const [restoreMsg, setRestoreMsg] = useState("");
+
+  function doBackup() {
+    const data = {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      regularBreakfasts, guestBreakfasts, daals, sabjis,
+      dinnerCombos, dinnerMains, dinnerBases, dinnerSides,
+      rotis, rices, plan, feedback,
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `meal-planner-backup-${new Date().toISOString().slice(0,10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function doRestore(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        if (data.version !== 1) { setRestoreMsg("❌ Invalid backup file."); return; }
+        if (data.regularBreakfasts) saveRegularBreakfasts(data.regularBreakfasts);
+        if (data.guestBreakfasts) saveGuestBreakfasts(data.guestBreakfasts);
+        if (data.daals) saveDaals(data.daals);
+        if (data.sabjis) saveSabjis(data.sabjis);
+        if (data.dinnerCombos) saveDinnerCombos(data.dinnerCombos);
+        if (data.dinnerMains) saveDinnerMains(data.dinnerMains);
+        if (data.dinnerBases) saveDinnerBases(data.dinnerBases);
+        if (data.dinnerSides) saveDinnerSides(data.dinnerSides);
+        if (data.rotis) saveRotis(data.rotis);
+        if (data.rices) saveRices(data.rices);
+        if (data.plan) savePlan(data.plan);
+        if (data.feedback) saveFeedback(data.feedback);
+        setRestoreMsg("✅ Restored successfully! All your data is back.");
+      } catch { setRestoreMsg("❌ Could not read file. Please try again."); }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  }
+
+  const sections = [
+    { key: "backup", label: "💾 Backup" },
+    { key: "regular-breakfast", label: "🌅 Regular Breakfast" },
+    { key: "guest-breakfast", label: "👥 Guest Breakfast" },
+    { key: "daals", label: "🥣 Daals" },
+    { key: "sabjis", label: "🥬 Sabjis" },
+    { key: "rotis", label: "🫓 Roti" },
+    { key: "rices", label: "🍚 Rice" },
+    { key: "dinner-combos", label: "📦 Dinner Combos" },
+    { key: "dinner-mains", label: "🍽️ Dinner Mains" },
+    { key: "dinner-bases", label: "🍚 Dinner Bases" },
+    { key: "dinner-sides", label: "🥗 Dinner Sides" },
+  ];
+
+  function getList() {
+    if (section === "regular-breakfast") return regularBreakfasts;
+    if (section === "guest-breakfast") return guestBreakfasts;
+    if (section === "daals") return daals;
+    if (section === "sabjis") return sabjis;
+    if (section === "rotis") return rotis;
+    if (section === "rices") return rices;
+    if (section === "dinner-combos") return dinnerCombos;
+    if (section === "dinner-mains") return dinnerMains;
+    if (section === "dinner-bases") return dinnerBases;
+    if (section === "dinner-sides") return dinnerSides;
+    return [];
+  }
+
+  function getSave() {
+    if (section === "regular-breakfast") return saveRegularBreakfasts;
+    if (section === "guest-breakfast") return saveGuestBreakfasts;
+    if (section === "daals") return saveDaals;
+    if (section === "sabjis") return saveSabjis;
+    if (section === "rotis") return saveRotis;
+    if (section === "rices") return saveRices;
+    if (section === "dinner-combos") return saveDinnerCombos;
+    if (section === "dinner-mains") return saveDinnerMains;
+    if (section === "dinner-bases") return saveDinnerBases;
+    if (section === "dinner-sides") return saveDinnerSides;
+    return () => {};
+  }
+
+  function deleteItem(id) {
+    const updated = getList().filter(x => x.id !== id);
+    getSave()(updated);
+  }
+
+  function startEdit(item) {
+    setEditItem(item);
+    setForm({ name: item.name, recipe: item.recipe || "", link: item.link || "", category: item.category || "Green" });
+    setAddMode(false);
+  }
+
+  function startAdd() {
+    setEditItem(null);
+    setForm({ name: "", recipe: "", link: "", category: "Green" });
+    setAddMode(true);
+  }
+
+  function saveEdit() {
+    if (!form.name.trim()) return;
+    const currentList = getList();
+    if (addMode) {
+      const newId = section + "_" + Date.now();
+      const newItem = { id: newId, ...form };
+      const updated = [...currentList, newItem].sort((a, b) => a.name.localeCompare(b.name));
+      getSave()(updated);
+    } else {
+      const updated = currentList
+        .map(x => x.id === editItem.id ? { ...x, ...form } : x)
+        .sort((a, b) => a.name.localeCompare(b.name));
+      getSave()(updated);
+    }
+    setEditItem(null);
+    setAddMode(false);
+  }
+
+  const showingEdit = editItem || addMode;
+
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 6, padding: "10px 12px", overflowX: "auto", borderBottom: "1px solid #E4E6EB" }}>
+        {sections.map(s => (
+          <button key={s.key} onClick={() => { setSection(s.key); setEditItem(null); setAddMode(false); }} style={{
+            whiteSpace: "nowrap", border: "none", borderRadius: 16, padding: "6px 12px",
+            fontSize: 11, fontWeight: 700, cursor: "pointer",
+            background: section === s.key ? "#1877F2" : "#F0F2F5",
+            color: section === s.key ? "#fff" : "#65676B",
+            fontFamily: "'Nunito', sans-serif",
+          }}>{s.label}</button>
+        ))}
+      </div>
+
+      {/* ── BACKUP SECTION ── */}
+      {section === "backup" && (
+        <div style={{ padding: 20 }}>
+          <div style={{ fontWeight: 800, fontSize: 16, color: "#1C1E21", marginBottom: 6 }}>💾 Backup & Restore</div>
+          <div style={{ fontSize: 13, color: "#65676B", marginBottom: 20, lineHeight: 1.5 }}>
+            Save all your meals, plans and recipes to a file on your device. If data is ever lost, restore it in one tap.
+          </div>
+
+          {/* Backup */}
+          <div style={{ background: "#E7F3FF", borderRadius: 14, padding: 16, marginBottom: 14 }}>
+            <div style={{ fontWeight: 800, fontSize: 15, color: "#1877F2", marginBottom: 6 }}>📤 Backup</div>
+            <div style={{ fontSize: 13, color: "#42599A", marginBottom: 12 }}>Downloads a backup file to your Mac / phone. Do this once a week.</div>
+            <button onClick={doBackup} style={{ background: "#1877F2", color: "#fff", border: "none", borderRadius: 12, padding: "12px 20px", fontSize: 15, fontWeight: 800, cursor: "pointer", width: "100%" }}>
+              💾 Download Backup File
+            </button>
+          </div>
+
+          {/* Restore */}
+          <div style={{ background: "#E8F8F0", borderRadius: 14, padding: 16, marginBottom: 14 }}>
+            <div style={{ fontWeight: 800, fontSize: 15, color: "#27AE60", marginBottom: 6 }}>📥 Restore</div>
+            <div style={{ fontSize: 13, color: "#1E8449", marginBottom: 12 }}>Pick your backup file to restore all your data instantly.</div>
+            <label style={{ background: "#27AE60", color: "#fff", border: "none", borderRadius: 12, padding: "12px 20px", fontSize: 15, fontWeight: 800, cursor: "pointer", width: "100%", display: "block", textAlign: "center", boxSizing: "border-box" }}>
+              📂 Choose Backup File
+              <input type="file" accept=".json" onChange={doRestore} style={{ display: "none" }} />
+            </label>
+          </div>
+
+          {restoreMsg && (
+            <div style={{ background: restoreMsg.startsWith("✅") ? "#E8F8F0" : "#FFF0F1", borderRadius: 10, padding: "12px 16px", fontSize: 14, fontWeight: 700, color: restoreMsg.startsWith("✅") ? "#27AE60" : "#E41E3F" }}>
+              {restoreMsg}
+            </div>
+          )}
+
+          <div style={{ marginTop: 20, background: "#FFF8EE", borderRadius: 12, padding: 14 }}>
+            <div style={{ fontWeight: 700, fontSize: 13, color: "#E67E22", marginBottom: 4 }}>💡 Tip</div>
+            <div style={{ fontSize: 12, color: "#784212", lineHeight: 1.5 }}>
+              Back up once a week — takes 2 seconds. Save the file to your Google Drive or WhatsApp it to yourself so you always have it.
+            </div>
+          </div>
+        </div>
+      )}
+
+      {section !== "backup" && (showingEdit ? (
+        <div style={{ padding: 16 }}>
+          <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 14, color: "#1C1E21" }}>
+            {addMode ? "➕ Add New" : "✏️ Edit"}
+          </div>
+          <div style={{ marginBottom: 10 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#65676B", marginBottom: 4 }}>Name *</div>
+            <input style={S.input} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Enter name..." />
+          </div>
+          {section === "sabjis" && (
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "#65676B", marginBottom: 4 }}>Category</div>
+              <div style={{ display: "flex", gap: 8 }}>
+                {["Marwari", "Punjabi", "Green"].map(c => (
+                  <button key={c} onClick={() => setForm(f => ({ ...f, category: c }))} style={{
+                    border: "none", borderRadius: 10, padding: "6px 14px", cursor: "pointer",
+                    fontWeight: 700, fontSize: 13, fontFamily: "'Nunito', sans-serif",
+                    background: form.category === c ? "#1877F2" : "#F0F2F5",
+                    color: form.category === c ? "#fff" : "#65676B",
+                  }}>{c}</button>
+                ))}
+              </div>
+            </div>
+          )}
+          <div style={{ marginBottom: 10 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#65676B", marginBottom: 4 }}>🔗 Recipe Link (YouTube / Instagram)</div>
+            <input style={S.input} value={form.link} onChange={e => setForm(f => ({ ...f, link: e.target.value }))} placeholder="Paste link..." />
+          </div>
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#65676B", marginBottom: 4 }}>📝 Recipe (type here)</div>
+            <textarea style={S.textarea} value={form.recipe} onChange={e => setForm(f => ({ ...f, recipe: e.target.value }))} placeholder="Type recipe steps..." />
+          </div>
+          <div style={{ display: "flex", gap: 10 }}>
+            <button style={{ ...S.doneBtn, margin: 0, flex: 1 }} onClick={saveEdit}>💾 Save</button>
+            <button style={{ flex: 1, background: "#F0F2F5", color: "#65676B", border: "none", borderRadius: 12, padding: 12, fontSize: 14, fontWeight: 700, cursor: "pointer" }}
+              onClick={() => { setEditItem(null); setAddMode(false); }}>Cancel</button>
+          </div>
+        </div>
+      ) : (
+        <div style={{ padding: "8px 14px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <div style={{ fontWeight: 800, fontSize: 13, color: "#1C1E21" }}>{sections.find(s => s.key === section)?.label} — {getList().length} items</div>
+            <button style={S.addNewBtn} onClick={startAdd}>+ Add New</button>
+          </div>
+          {alpha(getList()).map(item => (
+            <div key={item.id} style={S.manageItem}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 600, fontSize: 13, color: "#1C1E21" }}>{item.name}</div>
+                {item.category && <div style={{ fontSize: 11, color: "#65676B" }}>{item.category}</div>}
+                {item.recipe && <div style={{ fontSize: 11, color: "#27AE60" }}>📝 Has recipe</div>}
+                {item.link && <div style={{ fontSize: 11, color: "#1877F2" }}>📹 Has video</div>}
+                {item.components && <div style={{ fontSize: 11, color: "#65676B" }}>{item.components.join(", ")}</div>}
+              </div>
+              <div style={{ display: "flex", gap: 4 }}>
+                <button style={S.editBtn} onClick={() => startEdit(item)}>Edit</button>
+                <button style={S.deleteBtn} onClick={() => deleteItem(item.id)}>Del</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+    ReactDOM.render(<App />, document.getElementById('root'));
+  </script>
+</body>
+</html>
